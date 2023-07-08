@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "Code Copy Button",
+  "version": "1.0",
+  "description": "Adds a 'Copy Code' button to chat.openai.com when code formatting is detected.",
+  "content_scripts": [
+    {
+      "matches": ["https://chat.openai.com/*"],
+      "js": ["content.js", "theme.js"]
+    }
+  ]
+}

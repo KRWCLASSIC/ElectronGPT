@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #212122;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden; /* Add this line to hide the scrollbar */
+    }
+
+    .info-container {
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+
+    .extension-list {
+      list-style: square;
+      margin-left: 20px;
+      padding-left: 10px;
+      text-align: left; /* Align the extension list to the left */
+    }
+
+    .extension-list li {
+      margin-bottom: 10px; /* Add margin bottom to separate extensions */
+    }
+  </style>
+</head>
+<body>
+  <div class="info-container">
+    <h1>ElectronGPT by KRW CLASSIC</h1>
+    <p>This app is a simple app made with Electron that provides a standalone window for ChatGPT and includes some preloaded extensions. Preloaded extensions include:</p>
+    <ul class="extension-list">
+      <li>"ChatGPT Coding Kit" - Made by me and not released anywhere else extension that adds a "Copy Code" button at the bottom of the code block.</li>
+      <li>"ChatGPT Optimizer 1.9.2" - Made by Productivity Rocks and modified/decompiled by Me to ensure it works in the Electron environment.</li>
+    </ul>
+  </div>
+</body>
+</html>
