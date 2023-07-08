@@ -1,6 +1,6 @@
 {
-  "name": "electrongpt",
-  "version": "1.0.0",
+  "name": "ElectronGPT",
+  "version": "0.1",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
