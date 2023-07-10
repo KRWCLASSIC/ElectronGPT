@@ -4,3 +4,5 @@ node_modules
 extensionStates.json
 package-lock.json
 .hintrc
+.vscode
+dist
