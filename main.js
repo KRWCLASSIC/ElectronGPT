@@ -1,41 +1,32 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
-const path = require('path');
+const { app, BrowserWindow, Menu, dialog, MenuItem } = require('electron');
 const fs = require('fs');
+const path = require('path');
 
+// Global reference to the main window
 let mainWindow;
 
-let extensionStates = {}; // Track the enabled/disabled state of extensions
-const extensionNameOverrides = {}; // Store the extension name overrides
-
-const extensionStatesFilePath = path.join(__dirname, 'extensionStates.json');
-
-if (fs.existsSync(extensionStatesFilePath)) {
-  try {
-    const extensionStatesData = fs.readFileSync(extensionStatesFilePath);
-    extensionStates = JSON.parse(extensionStatesData);
-  } catch (error) {
-    console.error('Error reading extension states:', error);
-  }
-}
-
-function createWindow() {
-  const originalWindowName = 'ElectronGPT';
-  loadExtensionStates();
-  loadExtensionNameOverrides();
-
+// Function to create the main window
+function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
+    resizable: true,
     webPreferences: {
       nodeIntegration: true
     },
-    icon: path.join(__dirname, 'icon.png')
+    icon: path.join(__dirname, 'icon.png') // Specify the path to the icon file
   });
 
-  mainWindow.loadURL('https://chat.openai.com');
+  mainWindow.loadURL('https://chat.openai.com'); // Load the chat.openai.com site
 
+  // Handle window close event
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  // Handle page title update event
   mainWindow.webContents.on('page-title-updated', (event, title) => {
-    let dynamicWindowName = originalWindowName;
+    let dynamicWindowName = 'ElectronGPT';
 
     if (title.trim() !== 'ChatGPT') {
       dynamicWindowName += ` | ${title}`;
@@ -43,246 +34,130 @@ function createWindow() {
 
     mainWindow.setTitle(dynamicWindowName);
   });
-
-  const extensionPaths = [
-    path.join(__dirname, 'extensions', 'ChatGPT_Coding_Kit'),
-    path.join(__dirname, 'extensions', 'ChatGPT_Optimizer_1.9.3')
-  ];
-
-  extensionPaths.forEach((extensionPath) => {
-    const extensionName = path.basename(extensionPath);
-    const enabled = extensionStates[extensionName] !== false;
-  
-    if (enabled) {
-      mainWindow.webContents.session.loadExtension(extensionPath);
-    }
-  });
-  
-
-  const template = [
-    {
-      label: 'File',
-      submenu: [
-        { label: 'New Tab' },
-        { label: 'Open' },
-        { type: 'separator' },
-        {
-          label: 'Exit',
-          click() {
-            app.quit();
-          }
-        }
-      ]
-    },
-    {
-      label: 'Info',
-      submenu: [
-        {
-          label: 'Show Info',
-          click() {
-            createInfoWindow();
-          }
-        }
-      ]
-    },
-    {
-      label: 'Extensions',
-      submenu: getExtensionsSubMenu()
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
 }
 
-function createInfoWindow() {
-  const isMac = process.platform === 'darwin';
+// Function to create the extensions menu
+function createExtensionsMenu() {
+  const extensionsMenu = [];
 
-  const infoWindow = new BrowserWindow({
-    width: 800,
-    height: 320,
-    resizable: false,
-    title: 'ElectronGPT Info',
-    autoHideMenuBar: true,
-    frame: !isMac,
-    titleBarStyle: 'hiddenInset',
-    minimizable: false,
-    webPreferences: {
-      nodeIntegration: true
-    }
-  });
+  const etlFolderPath = './etl';
+  const overrideFilePath = './etl/dp_ext_txt_ov.json';
 
-  infoWindow.loadFile(path.join(__dirname, 'info.html'));
-}
+  // Read the folders in the etl folder
+  const extensionFolders = fs.readdirSync(etlFolderPath, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
 
-function saveExtensionStates() {
-  const extensionStatesData = JSON.stringify(extensionStates);
-
-  try {
-    fs.writeFileSync(extensionStatesFilePath, extensionStatesData);
-  } catch (error) {
-    console.error('Error saving extension states:', error);
-  }
-}
-
-function loadExtensionStates() {
-  const appPath = app.getPath('exe');
-  const appDirectory = path.dirname(appPath);
-  const extensionsPath = path.join(appDirectory, 'extensions');
-
-  if (!fs.existsSync(extensionsPath)) {
-    fs.mkdirSync(extensionsPath);
+  // Read the name overrides from the override file
+  let nameOverrides = {};
+  if (fs.existsSync(overrideFilePath)) {
+    const overrideFileData = fs.readFileSync(overrideFilePath, 'utf-8');
+    nameOverrides = JSON.parse(overrideFileData);
   }
 
-  const extensionStatesFilePath = path.join(extensionsPath, 'extensionStates.json');
+  // Create menu items for each extension
+  extensionFolders.forEach(folderName => {
+    let displayName = folderName;
 
-  if (fs.existsSync(extensionStatesFilePath)) {
-    try {
-      const extensionStatesData = fs.readFileSync(extensionStatesFilePath);
-      extensionStates = JSON.parse(extensionStatesData);
-    } catch (error) {
-      console.error('Error reading extension states:', error);
-    }
-  }
-}
-
-function loadExtensionNameOverrides() {
-  const extensionsPath = path.join(__dirname, 'extensions');
-  const extensions = fs.readdirSync(extensionsPath);
-
-  extensions.forEach((extension) => {
-    const extensionFolderPath = path.join(extensionsPath, extension);
-    const isDirectory = fs.statSync(extensionFolderPath).isDirectory();
-
-    if (!isDirectory) {
-      return; // Skip files in the extensions directory
+    // Check if name override exists for the folder
+    if (nameOverrides.hasOwnProperty(folderName)) {
+      displayName = nameOverrides[folderName];
     }
 
-    const extensionNameOverridePath = path.join(extensionFolderPath, 'extension_name_override.json');
-
-    if (fs.existsSync(extensionNameOverridePath)) {
-      try {
-        const extensionNameOverride = JSON.parse(fs.readFileSync(extensionNameOverridePath));
-        const extensionName = extensionNameOverride.overrideto || extension;
-        extensionNameOverrides[extension] = extensionName;
-      } catch (error) {
-        console.error(`Error parsing extension_name_override.json for ${extension}:`, error);
-      }
-    } else {
-      console.log(`extension_name_override.json not found for ${extension}`);
-      extensionNameOverrides[extension] = extension;
-    }
-  });
-
-  console.log('Extension Name Overrides:', extensionNameOverrides);
-}
-
-function showRestartConfirmation() {
-  const options = {
-    type: 'question',
-    buttons: ['Restart now', 'Don\'t restart now'],
-    defaultId: 0,
-    title: 'Restart Confirmation',
-    message: 'Restart is required',
-    detail: 'The application needs to be restarted for the changes to take effect.'
-  };
-
-  dialog.showMessageBox(null, options).then((response) => {
-    if (response.response === 0) {
-      app.relaunch();
-      app.quit();
-    }
-  });
-}
-
-function getExtensionsSubMenu() {
-  const extensionsPath = path.join(__dirname, 'extensions');
-  const extensions = fs.readdirSync(extensionsPath);
-  
-
-  const subMenu = extensions.map((extension) => {
-    const extensionFolderPath = path.join(extensionsPath, extension);
-    const isDirectory = fs.statSync(extensionFolderPath).isDirectory();
-
-    if (!isDirectory) {
-      return null; // Skip non-directory entries in the extensions directory
-    }
-
-    const extensionNameOverridePath = path.join(extensionsPath, 'extension_name_override.json');
-    let extensionName = extension; // Default to extension folder name
-
-    if (fs.existsSync(extensionNameOverridePath)) {
-      try {
-        const extensionNameOverrideData = fs.readFileSync(extensionNameOverridePath);
-        const extensionNameOverride = JSON.parse(extensionNameOverrideData);
-        extensionName = extensionNameOverride[extension] || extension; // Use the overridden name if available
-      } catch (error) {
-        console.error(`Error reading extension name override for ${extension}:`, error);
-      }
-    } else {
-      console.log(`extension_name_override.json not found for ${extension}`);
-      console.log('Extension Name Overrides:', extensionNameOverrides);
-      console.log('Extension Name Override Path:', extensionNameOverridePath);
-    }
-
-    const enabled = extensionStates[extension] !== false; // Check if the extension is enabled
-
-    return {
-      label: extensionName,
+    extensionsMenu.push({
+      label: displayName,
       type: 'checkbox',
-      checked: enabled,
-      click(menuItem) {
-        const newState = menuItem.checked;
-        const extensionFolder = extension;
+      checked: true, // Set the initial state to checked
+      click: () => {
+        // Handle extension toggle
+        const restartRequired = toggleExtension(folderName);
 
-        if (!newState && !Object.values(extensionStates).some((state) => state === true)) {
-          showRestartConfirmation();
+        if (restartRequired) {
+          // Show restart dialog
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Restart Required',
+            message: 'Please restart the application to apply the changes.',
+            buttons: ['Restart Now', 'Don\'t Restart Now']
+          }, (response) => {
+            if (response === 0) {
+              // Restart the application
+              app.relaunch();
+              app.exit();
+            }
+          });
         }
-
-        const currentState = extensionStates[extensionFolder];
-        if (newState !== currentState) {
-          extensionStates[extensionFolder] = newState;
-          saveExtensionStates();
-          if (currentState === true || newState === true) {
-            showRestartConfirmation();
-          }
-        }        
       }
-    };
+    });
   });
 
-  return subMenu.filter((menuItem) => menuItem !== null); // Remove null values from the submenu array
+  // Create the "Extensions" dropdown menu
+  const extensionsSubMenu = Menu.buildFromTemplate(extensionsMenu);
+  const menu = Menu.getApplicationMenu();
+  const extensionsMenuItem = new MenuItem({ label: 'Extensions', submenu: extensionsSubMenu });
+  menu.insert(menu.items.length - 1, extensionsMenuItem);
+  Menu.setApplicationMenu(menu);
 }
 
-app.on('ready', createWindow);
+// Function to toggle the extension
+function toggleExtension(extensionName) {
+  // Implement your extension toggling logic here
+  // Return true if restart is required, false otherwise
+  // You can modify this function based on your extension loading mechanism
+  // For now, it returns a random boolean value
+  return Math.random() < 0.5;
+}
 
+// Function to create the "Info" menu
+function createInfoMenu() {
+  const infoMenu = [
+    {
+      label: 'Show Info',
+      click: () => {
+        const infoWindow = new BrowserWindow({
+          width: 800,
+          height: 320,
+          resizable: false,
+          maximizable: false,
+          minimizable: false,
+          webPreferences: {
+            nodeIntegration: true
+          }
+        });
+
+        infoWindow.loadFile('info.html');
+
+        // Handle window close event
+        infoWindow.on('closed', () => {
+          infoWindow = null;
+        });
+      }
+    }
+  ];
+
+  const menu = Menu.getApplicationMenu();
+  const infoMenuItem = new MenuItem({ label: 'Info', submenu: infoMenu });
+  menu.insert(menu.items.length - 1, infoMenuItem);
+  Menu.setApplicationMenu(menu);
+}
+
+// Electron app's ready event
+app.on('ready', () => {
+  createMainWindow();
+  createExtensionsMenu();
+  createInfoMenu();
+});
+
+// Quit when all windows are closed
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
+// Activate the app (macOS specific)
 app.on('activate', () => {
   if (mainWindow === null) {
-    createWindow();
+    createMainWindow();
   }
-});
-
-app.on('before-quit', () => {
-  mainWindow.removeAllListeners('close');
-});
-
-app.on('web-contents-created', (event, webContents) => {
-  webContents.on('will-prevent-unload', (event) => {
-    const isRestartRequired = Object.values(extensionStates).includes(false);
-
-    if (isRestartRequired) {
-      event.preventDefault();
-      showRestartConfirmation();
-    }
-  });
 });

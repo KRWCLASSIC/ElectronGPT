@@ -1,8 +1,9 @@
 node_modules
-.launch_unbuilt.bat
-.build_dist.bat
+..launch_unbuilt.bat
+..build_dist.bat
 extensionStates.json
 package-lock.json
 .hintrc
 .vscode
 dist
+..REF

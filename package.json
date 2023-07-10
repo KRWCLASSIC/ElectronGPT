@@ -1,24 +1,30 @@
 {
-  "name": "ElectronGPT",
-  "version": "0.1.0",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
-  },
-  "devDependencies": {
-    "electron": "^12.0.0",
-    "electron-builder": "^22.14.13"
-  },
-  "build": {
-    "appId": "krw.apps.electrongpt",
-    "directories": {
-      "output": "dist"
+    "name": "ElectronGPT",
+    "version": "0.1.2",
+    "main": "main.js",
+    "scripts": {
+      "start": "electron .",
+      "build": "electron-builder",
+      "pack": "electron-builder --dir",
+      "dist": "electron-builder"
     },
-    "win": {
-      "target": "nsis"
+    "devDependencies": {
+      "electron": "^12.0.0",
+      "electron-builder": "^22.14.13"
+    },
+    "build": {
+      "appId": "krw.apps.electrongpt",
+      "directories": {
+        "output": "dist"
+      },
+      "win": {
+        "target": "nsis"
+      },
+      "files": [
+        "main.js",
+        "etl/**/*",
+        "info.html"
+      ]
     }
   }
-}
+  
